@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>California Home Energy System Calculator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .input-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border: 2px solid #e9ecef;
+        }
+        
+        .input-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #495057;
+        }
+        
+        input, select {
+            padding: 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+        }
+        
+        .calculate-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 20px;
+        }
+        
+        .calculate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+        
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+        
+        .result-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            border-left: 5px solid #007bff;
+            transition: all 0.3s ease;
+        }
+        
+        .result-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+        }
+        
+        .result-card h3 {
+            color: #007bff;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+        
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #f1f3f4;
+        }
+        
+        .result-item:last-child {
+            border-bottom: none;
+        }
+        
+        .result-label {
+            font-weight: 500;
+            color: #495057;
+        }
+        
+        .result-value {
+            font-weight: 700;
+            color: #007bff;
+            font-size: 1.1rem;
+        }
+        
+        .export-section {
+            margin-top: 30px;
+            text-align: center;
+        }
+        
+        .export-btn {
+            background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .export-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        }
+        
+        .methodology {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 30px;
+        }
+        
+        .methodology h3 {
+            color: #495057;
+            margin-bottom: 15px;
+        }
+        
+        .methodology p {
+            color: #6c757d;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏠 California Home Energy System Calculator</h1>
+            <p>Complete sizing for Solar, Battery, Heat Pump, and EV Charging Systems</p>
+        </div>
+        
+        <div class="content">
+            <div class="input-section">
+                <h2>House Configuration</h2>
+                <div class="input-group">
+                    <div class="form-group">
+                        <label for="houseSize">House Size (sq ft)</label>
+                        <input type="number" id="houseSize" value="2000" min="100" max="4000">
+                    </div>
+                    <div class="form-group">
+                        <label for="climateZone">California Climate Zone</label>
+                        <select id="climateZone">
+                            <option value="coastal">Coastal (Mild)</option>
+                            <option value="inland">Inland Valley (Moderate)</option>
+                            <option value="desert">Desert (Hot)</option>
+                            <option value="mountain">Mountain (Cold)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="insulationLevel">Insulation Level</label>
+                        <select id="insulationLevel">
+                            <option value="excellent">Excellent (New/Upgraded)</option>
+                            <option value="good">Good (1990-2010)</option>
+                            <option value="average">Average (1980-1990)</option>
+                            <option value="poor">Poor (Pre-1980)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="occupants">Number of Occupants</label>
+                        <input type="number" id="occupants" value="3" min="1" max="10">
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <div class="form-group">
+                        <label for="backupDays">Desired Backup Days</label>
+                        <input type="number" id="backupDays" value="3" min="1" max="7">
+                    </div>
+                    <div class="form-group">
+                        <label for="evCharging">EV Charging Needed</label>
+                        <select id="evCharging">
+                            <option value="none">No EV</option>
+                            <option value="level1">Level 1 (120V)</option>
+                            <option value="level2">Level 2 (240V)</option>
+                            <option value="dcfast">DC Fast Charge</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="poolSpa">Pool/Spa</label>
+                        <select id="poolSpa">
+                            <option value="none">None</option>
+                            <option value="small">Small Pool/Spa</option>
+                            <option value="large">Large Pool</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="homeType">Home Type</label>
+                        <select id="homeType">
+                            <option value="allElectric">All Electric</option>
+                            <option value="mixedFuel">Mixed Fuel (Gas+Electric)</option>
+                            <option value="gasBackup">Electric with Gas Backup</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <button class="calculate-btn" onclick="calculateSystems()">Calculate Energy Systems</button>
+            </div>
+            
+            <div id="results" style="display: none;">
+                <div class="results-grid">
+                    <div class="result-card">
+                        <h3>⚡ Energy Consumption</h3>
+                        <div id="energyResults"></div>
+                    </div>
+                    
+                    <div class="result-card">
+                        <h3>☀️ Solar Array System</h3>
+                        <div id="solarResults"></div>
+                    </div>
+                    
+                    <div class="result-card">
+                        <h3>🔋 Battery Storage System</h3>
+                        <div id="batteryResults"></div>
+                    </div>
+                    
+                    <div class="result-card">
+                        <h3>🔌 Power Inverter</h3>
+                        <div id="inverterResults"></div>
+                    </div>
+                    
+                    <div class="result-card">
+                        <h3>🌡️ Heat Pump System</h3>
+                        <div id="heatPumpResults"></div>
+                    </div>
+                    
+                    <div class="result-card">
+                        <h3>🚗 EV Charger</h3>
+                        <div id="evResults"></div>
+                    </div>
+                </div>
+                
+                <div class="export-section">
+                    <button class="export-btn" onclick="exportToCSV()">📊 Export to CSV</button>
+                    <button class="export-btn" onclick="exportToGoogleSheets()">📋 Export to Google Sheets</button>
+                    <button class="export-btn" onclick="printReport()">🖨️ Print Report</button>
+                </div>
+            </div>
+            
+            <div class="methodology">
+                <h3>📋 Calculation Methodology</h3>
+                <p><strong>Energy Consumption:</strong> Based on CA average of 0.49 kWh per sq ft per month, adjusted for climate zone, insulation, occupancy, and appliances.</p>
+                <p><strong>Solar Sizing:</strong> Calculated to meet 100% annual energy needs with 25% safety margin, considering CA Title 24 requirements (2.7-5.7 kW typical range).</p>
+                <p><strong>Battery Storage:</strong> Sized for desired backup days with 90% depth of discharge for lithium batteries, includes inverter efficiency losses.</p>
+                <p><strong>Heat Pump:</strong> Sized using 20-25 BTU per sq ft baseline, adjusted for climate zone and insulation quality.</p>
+                <p><strong>Inverter:</strong> Sized for 125% of peak load to handle surge requirements and future expansion.</p>
+                <p><strong>EV Charging:</strong> Level 1 (1.4kW), Level 2 (7.2kW), DC Fast (50kW) with appropriate electrical requirements.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let calculationResults = {};
+
+        function calculateSystems() {
+            const houseSize = parseFloat(document.getElementById('houseSize').value);
+            const climateZone = document.getElementById('climateZone').value;
+            const insulationLevel = document.getElementById('insulationLevel').value;
+            const occupants = parseInt(document.getElementById('occupants').value);
+            const backupDays = parseInt(document.getElementById('backupDays').value);
+            const evCharging = document.getElementById('evCharging').value;
+            const poolSpa = document.getElementById('poolSpa').value;
+            const homeType = document.getElementById('homeType').value;
+
+            // Climate zone multipliers
+            const climateMultipliers = {
+                coastal: 0.85,
+                inland: 1.0,
+                desert: 1.35,
+                mountain: 1.1
+            };
+
+            // Insulation multipliers
+            const insulationMultipliers = {
+                excellent: 0.8,
+                good: 0.9,
+                average: 1.0,
+                poor: 1.3
+            };
+
+            // Base energy consumption (kWh per sq ft per month)
+            const baseConsumption = 0.49;
+            
+            // Calculate monthly energy consumption
+            const monthlyConsumption = houseSize * baseConsumption * 
+                climateMultipliers[climateZone] * 
+                insulationMultipliers[insulationLevel] * 
+                (1 + (occupants - 3) * 0.15); // Adjust for occupancy
+
+            // Add additional loads
+            let additionalLoad = 0;
+            if (poolSpa === 'small') additionalLoad += 300;
+            if (poolSpa === 'large') additionalLoad += 600;
+            if (homeType === 'allElectric') additionalLoad += monthlyConsumption * 0.4; // 40% more for all-electric
+
+            const totalMonthlyConsumption = monthlyConsumption + additionalLoad;
+            const dailyConsumption = totalMonthlyConsumption / 30;
+            const annualConsumption = totalMonthlyConsumption * 12;
+
+            // Solar system sizing (with 25% safety margin)
+            const solarSystemSize = (annualConsumption * 1.25) / (365 * 5.5); // 5.5 peak sun hours average for CA
+            const solarPanelCount = Math.ceil(solarSystemSize * 1000 / 400); // 400W panels
+            const solarChargerAmps = Math.ceil(solarSystemSize * 1000 / 48 / 10); // 48V system, C/10 charge rate
+
+            // Battery storage sizing
+            const batteryCapacityKwh = dailyConsumption * backupDays / 0.9; // 90% DoD for lithium
+            const batteryCapacityAh = batteryCapacityKwh * 1000 / 48; // 48V system
+            const numberOfBatteries = Math.ceil(batteryCapacityKwh / 13.5); // 13.5kWh per battery unit
+
+            // Inverter sizing (125% of peak load)
+            const peakLoad = dailyConsumption * 1000 / 8; // Assume 8-hour peak usage window
+            const inverterSize = Math.ceil(peakLoad * 1.25 / 1000) * 1000; // Round up to nearest kW
+
+            // Heat pump sizing (BTU calculation)
+            const baseBtuPerSqFt = climateZone === 'desert' ? 25 : 
+                                   climateZone === 'mountain' ? 30 : 
+                                   climateZone === 'coastal' ? 18 : 22;
+            
+            const heatPumpBtu = houseSize * baseBtuPerSqFt * insulationMultipliers[insulationLevel];
+            const heatPumpTons = heatPumpBtu / 12000;
+
+            // EV Charger specifications
+            const evSpecs = {
+                none: { power: 0, voltage: 0, amps: 0, type: 'None' },
+                level1: { power: 1.4, voltage: 120, amps: 12, type: 'Level 1 (Standard)' },
+                level2: { power: 7.2, voltage: 240, amps: 30, type: 'Level 2 (Fast)' },
+                dcfast: { power: 50, voltage: 480, amps: 104, type: 'DC Fast Charge' }
+            };
+
+            // Store results
+            calculationResults = {
+                houseSize,
+                climateZone,
+                insulationLevel,
+                occupants,
+                backupDays,
+                dailyConsumption: dailyConsumption.toFixed(1),
+                monthlyConsumption: totalMonthlyConsumption.toFixed(0),
+                annualConsumption: annualConsumption.toFixed(0),
+                solarSystemSize: solarSystemSize.toFixed(1),
+                solarPanelCount,
+                solarChargerAmps,
+                batteryCapacityKwh: batteryCapacityKwh.toFixed(1),
+                batteryCapacityAh: batteryCapacityAh.toFixed(0),
+                numberOfBatteries,
+                inverterSize,
+                heatPumpBtu: heatPumpBtu.toFixed(0),
+                heatPumpTons: heatPumpTons.toFixed(1),
+                evSpecs: evSpecs[evCharging]
+            };
+
+            displayResults();
+        }
+
+        function displayResults() {
+            document.getElementById('results').style.display = 'block';
+
+            // Energy Results
+            document.getElementById('energyResults').innerHTML = `
+                <div class="result-item">
+                    <span class="result-label">Daily Consumption:</span>
+                    <span class="result-value">${calculationResults.dailyConsumption} kWh</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Monthly Consumption:</span>
+                    <span class="result-value">${calculationResults.monthlyConsumption} kWh</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Annual Consumption:</span>
+                    <span class="result-value">${calculationResults.annualConsumption} kWh</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Peak Load Estimate:</span>
+                    <span class="result-value">${(calculationResults.dailyConsumption * 1000 / 8).toFixed(0)} W</span>
+                </div>
+            `;
+
+            // Solar Results
+            document.getElementById('solarResults').innerHTML = `
+                <div class="result-item">
+                    <span class="result-label">System Size:</span>
+                    <span class="result-value">${calculationResults.solarSystemSize} kW</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Panel Count (400W):</span>
+                    <span class="result-value">${calculationResults.solarPanelCount} panels</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Charge Controller:</span>
+                    <span class="result-value">${calculationResults.solarChargerAmps}A MPPT</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Estimated Annual Generation:</span>
+                    <span class="result-value">${(calculationResults.solarSystemSize * 1460).toFixed(0)} kWh</span>
+                </div>
+            `;
+
+            // Battery Results
+            document.getElementById('batteryResults').innerHTML = `
+                <div class="result-item">
+                    <span class="result-label">Total Capacity:</span>
+                    <span class="result-value">${calculationResults.batteryCapacityKwh} kWh</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Battery Bank (48V):</span>
+                    <span class="result-value">${calculationResults.batteryCapacityAh} Ah</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Number of Batteries:</span>
+                    <span class="result-value">${calculationResults.numberOfBatteries} units</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Backup Duration:</span>
+                    <span class="result-value">${calculationResults.backupDays} days</span>
+                </div>
+            `;
+
+            // Inverter Results
+            document.getElementById('inverterResults').innerHTML = `
+                <div class="result-item">
+                    <span class="result-label">Inverter Size:</span>
+                    <span class="result-value">${calculationResults.inverterSize} W</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Type Recommended:</span>
+                    <span class="result-value">Pure Sine Wave</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Voltage:</span>
+                    <span class="result-value">48V DC to 240V AC</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Grid Tie Capability:</span>
+                    <span class="result-value">Hybrid Inverter</span>
+                </div>
+            `;
+
+            // Heat Pump Results
+            document.getElementById('heatPumpResults').innerHTML = `
+                <div class="result-item">
+                    <span class="result-label">Heating Capacity:</span>
+                    <span class="result-value">${calculationResults.heatPumpBtu} BTU/hr</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">System Size:</span>
+                    <span class="result-value">${calculationResults.heatPumpTons} tons</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Type Recommended:</span>
+                    <span class="result-value">Multi-zone Ductless</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Efficiency Rating:</span>
+                    <span class="result-value">SEER 20+ / HSPF 10+</span>
+                </div>
+            `;
+
+            // EV Results
+            document.getElementById('evResults').innerHTML = `
+                <div class="result-item">
+                    <span class="result-label">Charger Type:</span>
+                    <span class="result-value">${calculationResults.evSpecs.type}</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Power Rating:</span>
+                    <span class="result-value">${calculationResults.evSpecs.power} kW</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Voltage:</span>
+                    <span class="result-value">${calculationResults.evSpecs.voltage}V</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Current Draw:</span>
+                    <span class="result-value">${calculationResults.evSpecs.amps}A</span>
+                </div>
+            `;
+        }
+
+        function exportToCSV() {
+            const csvData = [
+                ['Parameter', 'Value', 'Unit'],
+                ['House Size', calculationResults.houseSize, 'sq ft'],
+                ['Climate Zone', calculationResults.climateZone, ''],
+                ['Insulation Level', calculationResults.insulationLevel, ''],
+                ['Occupants', calculationResults.occupants, 'people'],
+                ['Daily Energy Consumption', calculationResults.dailyConsumption, 'kWh'],
+                ['Monthly Energy Consumption', calculationResults.monthlyConsumption, 'kWh'],
+                ['Annual Energy Consumption', calculationResults.annualConsumption, 'kWh'],
+                ['Solar System Size', calculationResults.solarSystemSize, 'kW'],
+                ['Solar Panel Count', calculationResults.solarPanelCount, 'panels'],
+                ['Solar Charge Controller', calculationResults.solarChargerAmps, 'A'],
+                ['Battery Capacity', calculationResults.batteryCapacityKwh, 'kWh'],
+                ['Battery Bank', calculationResults.batteryCapacityAh, 'Ah'],
+                ['Number of Batteries', calculationResults.numberOfBatteries, 'units'],
+                ['Inverter Size', calculationResults.inverterSize, 'W'],
+                ['Heat Pump Capacity', calculationResults.heatPumpBtu, 'BTU/hr'],
+                ['Heat Pump Size', calculationResults.heatPumpTons, 'tons'],
+                ['EV Charger Type', calculationResults.evSpecs.type, ''],
+                ['EV Charger Power', calculationResults.evSpecs.power, 'kW'],
+                ['Backup Days', calculationResults.backupDays, 'days']
+            ];
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvData.forEach(row => {
+                csvContent += row.join(",") + "\n";
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "energy_system_calculation.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function exportToGoogleSheets() {
+            const sheetsUrl = `https://docs.google.com/spreadsheets/create`;
+            window.open(sheetsUrl, '_blank');
+            
+            // Copy data to clipboard
+            const data = Object.entries(calculationResults).map(([key, value]) => `${key}: ${value}`).join('\n');
+            navigator.clipboard.writeText(data).then(() => {
+                alert('Calculation data copied to clipboard! Paste it into your new Google Sheet.');
+            });
+        }
+
+        function printReport() {
+            window.print();
+        }
+    </script>
+</body>
+</html>
