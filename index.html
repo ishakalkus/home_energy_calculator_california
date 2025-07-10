@@ -13,7 +13,7 @@
         
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: transparent;
             min-height: 100vh;
             padding: 20px;
         }
@@ -164,7 +164,7 @@
         
         .chart-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(800px, 1fr));
             gap: 25px;
             margin-top: 20px;
         }
@@ -237,7 +237,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🏠 California Home Energy System Calculator</h1>
+            <img src="https://intercal8.com/wp-content/uploads/2024/04/intercal8logovector.svg" style="width: 500px;"> 
+            <h1>Home Energy System Calculator</h1>
             <p>Complete sizing for Solar, Battery (400V DC), Heat Pump, and EV Charging Systems</p>
         </div>
         
@@ -275,16 +276,11 @@
                 
                 <div class="input-group">
                     <div class="form-group">
-                        <label for="backupDays">Desired Backup Days</label>
-                        <input type="number" id="backupDays" value="3" min="1" max="7">
-                    </div>
-                    <div class="form-group">
-                        <label for="evCharging">EV Charging Needed</label>
-                        <select id="evCharging">
-                            <option value="none">No EV</option>
-                            <option value="level1">Level 1 (120V)</option>
-                            <option value="level2">Level 2 (240V)</option>
-                            <option value="dcfast">DC Fast Charge</option>
+                        <label for="homeType">Home Type</label>
+                        <select id="homeType">
+                            <option value="allElectric">All Electric</option>
+                            <option value="mixedFuel">Mixed Fuel (Gas+Electric)</option>
+                            <option value="gasBackup">Electric with Gas Backup</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -296,12 +292,24 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="homeType">Home Type</label>
-                        <select id="homeType">
-                            <option value="allElectric">All Electric</option>
-                            <option value="mixedFuel">Mixed Fuel (Gas+Electric)</option>
-                            <option value="gasBackup">Electric with Gas Backup</option>
+                        <label for="backupDays">Desired Backup Days</label>
+                        <input type="number" id="backupDays" value="3" min="1" max="7">
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <div class="form-group">
+                        <label for="evCharging">EV Charging Needed</label>
+                        <select id="evCharging" onchange="toggleEVMileageInput()">
+                            <option value="none">No EV</option>
+                            <option value="level1">Level 1 (120V)</option>
+                            <option value="level2">Level 2 (240V)</option>
+                            <option value="dcfast">DC Fast Charge</option>
                         </select>
+                    </div>
+                    <div class="form-group" id="evMileageGroup" style="display: none;">
+                        <label for="evDailyMiles">Daily EV Mileage (miles)</label>
+                        <input type="number" id="evDailyMiles" value="37" min="0" max="300">
                     </div>
                 </div>
                 
@@ -383,14 +391,25 @@
                 <p><strong>Battery Storage:</strong> Sized for desired backup days with 90% depth of discharge for lithium batteries using 400V DC architecture, includes inverter efficiency losses.</p>
                 <p><strong>Heat Pump:</strong> Sized using kW ratings based on climate zone and insulation (6-12 kW typical range for heating/cooling), with proper kW values for US 120V/240V systems.</p>
                 <p><strong>Inverter:</strong> Sized for 125% of peak load to handle surge requirements and future expansion.</p>
-                <p><strong>EV Charging:</strong> Based on average 36.9 miles/day driving with 3.2 miles/kWh efficiency (includes charging losses). Level 1 (1.4kW@120V), Level 2 (7.2kW@240V), DC Fast (50kW@480V). EV charging typically occurs during off-peak hours (11PM-6AM) for cost savings.</p>
+                <p><strong>EV Charging:</strong> Based on user-provided daily mileage with an average 3.2 miles/kWh efficiency (includes charging losses). Level 1 (1.4kW@120V), Level 2 (7.2kW@240V), DC Fast (50kW@480V). EV charging typically occurs during off-peak hours (11PM-6AM) for cost savings.</p>
                 <p><strong>Seasonal Charts:</strong> Based on real California solar irradiance data - Summer peaks at 1.8x average, Winter drops to 0.4x average, with typical daily consumption patterns.</p>
             </div>
         </div>
+        <p><a href="www.intercal8.com" style="font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; justify-content: center; display: flex; align-items: center;">Intercal8</a></p>
     </div>
 
     <script>
         let calculationResults = {};
+
+        function toggleEVMileageInput() {
+            const evCharging = document.getElementById('evCharging').value;
+            const mileageGroup = document.getElementById('evMileageGroup');
+            if (evCharging === 'none') {
+                mileageGroup.style.display = 'none';
+            } else {
+                mileageGroup.style.display = 'flex';
+            }
+        }
 
         function calculateSystems() {
             const houseSize = parseFloat(document.getElementById('houseSize').value);
@@ -399,6 +418,7 @@
             const occupants = parseInt(document.getElementById('occupants').value);
             const backupDays = parseInt(document.getElementById('backupDays').value);
             const evCharging = document.getElementById('evCharging').value;
+            const dailyMiles = parseFloat(document.getElementById('evDailyMiles').value);
             const poolSpa = document.getElementById('poolSpa').value;
             const homeType = document.getElementById('homeType').value;
 
@@ -422,10 +442,7 @@
             const baseConsumption = 0.49;
             
             // Calculate monthly energy consumption
-            const monthlyConsumption = houseSize * baseConsumption * 
-                climateMultipliers[climateZone] * 
-                insulationMultipliers[insulationLevel] * 
-                (1 + (occupants - 3) * 0.15); // Adjust for occupancy
+            const monthlyConsumption = houseSize * baseConsumption * climateMultipliers[climateZone] * insulationMultipliers[insulationLevel] * (1 + (occupants - 3) * 0.15); // Adjust for occupancy
 
             // Add additional loads
             let additionalLoad = 0;
@@ -436,11 +453,9 @@
             // Add EV charging consumption
             let evDailyConsumption = 0;
             if (evCharging !== 'none') {
-                // Real-world EV data: Average 36.9 miles/day for US drivers
-                const dailyMiles = 36.9;
                 // Average EV efficiency: 3.2 miles per kWh (includes charging losses)
                 const milesPerKwh = 3.2;
-                evDailyConsumption = dailyMiles / milesPerKwh; // ~11.5 kWh/day
+                evDailyConsumption = dailyMiles / milesPerKwh;
             }
 
             const totalMonthlyConsumption = monthlyConsumption + additionalLoad + (evDailyConsumption * 30);
