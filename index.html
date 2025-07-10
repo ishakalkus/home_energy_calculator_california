@@ -383,7 +383,7 @@
                 <p><strong>Battery Storage:</strong> Sized for desired backup days with 90% depth of discharge for lithium batteries using 400V DC architecture, includes inverter efficiency losses.</p>
                 <p><strong>Heat Pump:</strong> Sized using kW ratings based on climate zone and insulation (6-12 kW typical range for heating/cooling), with proper kW values for US 120V/240V systems.</p>
                 <p><strong>Inverter:</strong> Sized for 125% of peak load to handle surge requirements and future expansion.</p>
-                <p><strong>EV Charging:</strong> Level 1 (1.4kW@120V), Level 2 (7.2kW@240V), DC Fast (50kW@480V) with appropriate electrical requirements for US standards.</p>
+                <p><strong>EV Charging:</strong> Based on average 36.9 miles/day driving with 3.2 miles/kWh efficiency (includes charging losses). Level 1 (1.4kW@120V), Level 2 (7.2kW@240V), DC Fast (50kW@480V). EV charging typically occurs during off-peak hours (11PM-6AM) for cost savings.</p>
                 <p><strong>Seasonal Charts:</strong> Based on real California solar irradiance data - Summer peaks at 1.8x average, Winter drops to 0.4x average, with typical daily consumption patterns.</p>
             </div>
         </div>
@@ -433,7 +433,17 @@
             if (poolSpa === 'large') additionalLoad += 600;
             if (homeType === 'allElectric') additionalLoad += monthlyConsumption * 0.4; // 40% more for all-electric
 
-            const totalMonthlyConsumption = monthlyConsumption + additionalLoad;
+            // Add EV charging consumption
+            let evDailyConsumption = 0;
+            if (evCharging !== 'none') {
+                // Real-world EV data: Average 36.9 miles/day for US drivers
+                const dailyMiles = 36.9;
+                // Average EV efficiency: 3.2 miles per kWh (includes charging losses)
+                const milesPerKwh = 3.2;
+                evDailyConsumption = dailyMiles / milesPerKwh; // ~11.5 kWh/day
+            }
+
+            const totalMonthlyConsumption = monthlyConsumption + additionalLoad + (evDailyConsumption * 30);
             const dailyConsumption = totalMonthlyConsumption / 30;
             const annualConsumption = totalMonthlyConsumption * 12;
 
@@ -484,6 +494,8 @@
                 insulationLevel,
                 occupants,
                 backupDays,
+                evCharging,
+                evDailyConsumption: evDailyConsumption.toFixed(1),
                 dailyConsumption: dailyConsumption.toFixed(1),
                 monthlyConsumption: totalMonthlyConsumption.toFixed(0),
                 annualConsumption: annualConsumption.toFixed(0),
@@ -516,6 +528,11 @@
                     <span class="result-label">Daily Consumption:</span>
                     <span class="result-value">${calculationResults.dailyConsumption} kWh</span>
                 </div>
+                ${calculationResults.evCharging !== 'none' ? `
+                <div class="result-item">
+                    <span class="result-label">EV Daily Charging:</span>
+                    <span class="result-value">${calculationResults.evDailyConsumption} kWh</span>
+                </div>` : ''}
                 <div class="result-item">
                     <span class="result-label">Monthly Consumption:</span>
                     <span class="result-value">${calculationResults.monthlyConsumption} kWh</span>
@@ -664,13 +681,16 @@
                 winter: solarSystemSize * 2.8    // December: Lowest ~2.8 kWh/kW/day
             };
             
-            // California residential consumption patterns by season
+                                // Real CA residential consumption patterns by season
             const seasonalConsumption = {
                 spring: dailyConsumption * 0.85,  // Mild weather, minimal HVAC
                 summer: dailyConsumption * 1.25,  // High AC usage (4-9pm peak)
                 autumn: dailyConsumption * 0.8,   // Comfortable weather
                 winter: dailyConsumption * 1.1    // Some heating, shorter days
             };
+            
+            // EV charging patterns (if EV is selected)
+            const evConsumption = parseFloat(calculationResults.evDailyConsumption) || 0;
             
             const seasons = ['spring', 'summer', 'autumn', 'winter'];
             const chartIds = ['springChart', 'summerChart', 'autumnChart', 'winterChart'];
@@ -715,31 +735,37 @@
                     production.push(Math.max(0, prodValue));
                     
                     // Real CA residential consumption patterns
-                    let consValue = totalDailyConsumption / 24 * 0.4; // Base load (24/7 appliances)
+                    let consValue = (totalDailyConsumption - evConsumption) / 24 * 0.4; // Base load (24/7 appliances)
                     
                     // Morning peak (7-9am): getting ready for work/school
                     if (h >= 7 && h <= 9) {
-                        consValue += totalDailyConsumption * 0.08;
+                        consValue += (totalDailyConsumption - evConsumption) * 0.08;
                     }
                     // Midday (10am-3pm): moderate usage
                     else if (h >= 10 && h <= 15) {
-                        consValue += totalDailyConsumption * 0.04;
+                        consValue += (totalDailyConsumption - evConsumption) * 0.04;
                     }
                     // California peak hours (4-9pm): highest consumption
                     else if (h >= 16 && h <= 21) {
                         if (season === 'summer') {
-                            consValue += totalDailyConsumption * 0.12; // High AC usage
+                            consValue += (totalDailyConsumption - evConsumption) * 0.12; // High AC usage
                         } else {
-                            consValue += totalDailyConsumption * 0.08; // Normal evening peak
+                            consValue += (totalDailyConsumption - evConsumption) * 0.08; // Normal evening peak
                         }
                     }
                     // Late evening (10pm-12am): winding down
                     else if (h >= 22 && h <= 23) {
-                        consValue += totalDailyConsumption * 0.03;
+                        consValue += (totalDailyConsumption - evConsumption) * 0.03;
                     }
                     // Night (1am-6am): minimal usage
                     else if (h >= 1 && h <= 6) {
-                        consValue = totalDailyConsumption / 24 * 0.25;
+                        consValue = (totalDailyConsumption - evConsumption) / 24 * 0.25;
+                    }
+                    
+                    // Add EV charging (typically 11pm-6am for off-peak rates)
+                    if (evConsumption > 0 && ((h >= 23) || (h >= 0 && h <= 6))) {
+                        // Spread EV charging over 8 hours (11pm-7am)
+                        consValue += evConsumption / 8;
                     }
                     
                     consumption.push(consValue);
@@ -837,18 +863,37 @@
             }
             ctx.stroke();
             
-            // Highlight California peak hours (4-9pm) in summer/winter
+            // Highlight California peak hours (4-9pm) and EV charging hours
             if (season === 'summer' || season === 'winter') {
+                // Peak hours (4-9pm)
                 ctx.fillStyle = 'rgba(255, 193, 7, 0.3)';
-                const startX = padding + (16 / 24) * chartWidth; // 4pm
-                const endX = padding + (21 / 24) * chartWidth;   // 9pm
-                ctx.fillRect(startX, padding, endX - startX, chartHeight);
+                const peakStartX = padding + (16 / 24) * chartWidth; // 4pm
+                const peakEndX = padding + (21 / 24) * chartWidth;   // 9pm
+                ctx.fillRect(peakStartX, padding, peakEndX - peakStartX, chartHeight);
                 
                 // Peak hours label
                 ctx.fillStyle = '#856404';
                 ctx.font = 'bold 12px Arial';
-                ctx.fillText('CA Peak Hours', startX + 5, padding + 20);
-                ctx.fillText('(4-9 PM)', startX + 5, padding + 35);
+                ctx.fillText('CA Peak Hours', peakStartX + 5, padding + 20);
+                ctx.fillText('(4-9 PM)', peakStartX + 5, padding + 35);
+            }
+            
+            // Highlight EV charging hours (11pm-6am) if EV is selected
+            if (parseFloat(calculationResults.evDailyConsumption) > 0) {
+                ctx.fillStyle = 'rgba(13, 202, 240, 0.2)';
+                const evStartX1 = padding + (23 / 24) * chartWidth; // 11pm
+                const evEndX1 = padding + chartWidth;               // midnight
+                const evStartX2 = padding;                          // midnight
+                const evEndX2 = padding + (6 / 24) * chartWidth;   // 6am
+                
+                ctx.fillRect(evStartX1, padding, evEndX1 - evStartX1, chartHeight);
+                ctx.fillRect(evStartX2, padding, evEndX2 - evStartX2, chartHeight);
+                
+                // EV charging label
+                ctx.fillStyle = '#0a5a6b';
+                ctx.font = 'bold 10px Arial';
+                ctx.fillText('EV Charging', evStartX2 + 5, padding + 55);
+                ctx.fillText('(11PM-6AM)', evStartX2 + 5, padding + 70);
             }
             
             // Draw axes
@@ -935,9 +980,15 @@
             ctx.font = 'bold 12px Arial';
             ctx.textAlign = 'left';
             ctx.fillStyle = '#28a745';
-            ctx.fillText('● Solar Production', width - 180, height - 40);
+            ctx.fillText('● Solar Production', width - 180, height - 55);
             ctx.fillStyle = '#dc3545';
-            ctx.fillText('● Home Consumption', width - 180, height - 25);
+            ctx.fillText('● Home Consumption', width - 180, height - 40);
+            
+            if (parseFloat(calculationResults.evDailyConsumption) > 0) {
+                ctx.fillStyle = '#0dcaf0';
+                ctx.font = '11px Arial';
+                ctx.fillText('● EV Charging (11PM-6AM)', width - 180, height - 25);
+            }
         }
 
         function exportToCSV() {
@@ -948,6 +999,7 @@
                 ['Insulation Level', calculationResults.insulationLevel, ''],
                 ['Occupants', calculationResults.occupants, 'people'],
                 ['Daily Energy Consumption', calculationResults.dailyConsumption, 'kWh'],
+                ['EV Daily Charging', calculationResults.evDailyConsumption, 'kWh'],
                 ['Monthly Energy Consumption', calculationResults.monthlyConsumption, 'kWh'],
                 ['Annual Energy Consumption', calculationResults.annualConsumption, 'kWh'],
                 ['Solar System Size', calculationResults.solarSystemSize, 'kW'],
